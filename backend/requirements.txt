@@ -1,10 +1,10 @@
 fastapi
 uvicorn
-python-multipart
 python-dotenv
 langchain
 langchain-google-genai
+langchain-pinecone
 pinecone-client
 pytesseract
 pillow
-numpy
+python-multipart
