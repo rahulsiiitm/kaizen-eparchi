@@ -3,6 +3,7 @@ import time
 import uuid
 import base64
 import json
+from pydantic import SecretStr
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.documents import Document
@@ -15,14 +16,14 @@ load_dotenv()
 # Vision Model (Reads the Image)
 vision_llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
-    google_api_key=os.getenv("GOOGLE_API_KEY")
+    api_key=SecretStr(os.getenv("GOOGLE_API_KEY") or "")
 )
 
 # Reasoning Model (Summarizes the Text)
 summary_llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     temperature=0.3,
-    google_api_key=os.getenv("GOOGLE_API_KEY")
+    api_key=SecretStr(os.getenv("GOOGLE_API_KEY") or "")
 )
 
 embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
@@ -43,6 +44,8 @@ async def process_upload(file_bytes: bytes, filename: str):
         
         ai_response = vision_llm.invoke([ocr_message])
         extracted_text = ai_response.content
+        if isinstance(extracted_text, list):
+            extracted_text = " ".join(str(item) for item in extracted_text)
         print(f"✅ Text Extracted ({len(extracted_text)} chars)")
 
         # --- STEP 2: Save to Brain (Pinecone) ---
@@ -84,7 +87,10 @@ async def process_upload(file_bytes: bytes, filename: str):
         """
         
         summary_response = summary_llm.invoke(summary_prompt)
-        clean_json_text = summary_response.content.replace("```json", "").replace("```", "").strip()
+        content = summary_response.content
+        if isinstance(content, list):
+            content = " ".join(str(item) for item in content)
+        clean_json_text = content.replace("```json", "").replace("```", "").strip()
         
         # Parse it to ensure it's valid JSON for the frontend
         try:

@@ -1,6 +1,7 @@
 import os
 import time
 from dotenv import load_dotenv
+from pydantic import SecretStr
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.documents import Document
@@ -22,7 +23,7 @@ print(f"🔌 Connecting to Pinecone Index: {index_name}...")
 # 2. Initialize the Embedding Model (Must be 'text-embedding-004' for 768 dimensions)
 embeddings = GoogleGenerativeAIEmbeddings(
     model="models/text-embedding-004",
-    google_api_key=google_key
+    google_api_key=SecretStr(google_key)
 )
 
 # 3. The "Golden Dataset" (Dummy Data)

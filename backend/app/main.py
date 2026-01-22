@@ -24,11 +24,15 @@ async def query_records(request: QueryRequest):
 
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
-    # 1. Read the uploaded bytes
+    # 1. Check if filename is provided
+    if file.filename is None:
+        raise HTTPException(status_code=400, detail="File must have a filename.")
+    
+    # 2. Read the uploaded bytes
     content = await file.read()
     
-    # 2. Feed it to the brain
-    result = await process_upload(content, file.filename)
+    # 3. Feed it to the brain
+    result = process_upload(content, file.filename)
     
     return result
 
@@ -38,7 +42,11 @@ async def analyze_scan(file: UploadFile = File(...)):
     if file.content_type not in ["image/jpeg", "image/png", "image/webp"]:
         raise HTTPException(status_code=400, detail="Invalid file type. Please upload an X-Ray image.")
 
-    # 2. Process
+    # 2. Check if filename is provided
+    if file.filename is None:
+        raise HTTPException(status_code=400, detail="File must have a filename.")
+
+    # 3. Process
     content = await file.read()
     result = await analyze_xray(content, file.filename)
 
