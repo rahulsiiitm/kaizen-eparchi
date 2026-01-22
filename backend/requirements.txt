@@ -1,9 +1,9 @@
 fastapi
 uvicorn
 python-dotenv
-langchain
-langchain-google-genai
-langchain-pinecone
+langchain==0.1.20
+langchain-google-genai==1.0.3
+langchain-pinecone==0.1.0
 pinecone-client
 pytesseract
 pillow
