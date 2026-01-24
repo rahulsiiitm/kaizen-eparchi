@@ -1,74 +1,128 @@
 import os
-# 1. Standard Imports
+from typing import Optional
 from dotenv import load_dotenv
+from pinecone import Pinecone
+from pydantic import SecretStr
+
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
-
-# 2. Updated Core Imports (The Fix)
 from langchain.chains import RetrievalQA
-from langchain_core.prompts import PromptTemplate  # We fixed this earlier
+from langchain_core.prompts import PromptTemplate
 
 load_dotenv()
 
-# 1. Connect to the Index you just verified
-embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+# === ENV VARS ===
+pinecone_key = os.getenv("PINECONE_API_KEY")
+pinecone_index = os.getenv("PINECONE_INDEX_NAME")
+google_key = os.getenv("GOOGLE_API_KEY")
+
+assert pinecone_key, "Missing PINECONE_API_KEY"
+assert pinecone_index, "Missing PINECONE_INDEX_NAME"
+assert google_key, "Missing GOOGLE_API_KEY"
+
+# === INIT PINECONE CLIENT ===
+pc = Pinecone(api_key=pinecone_key)
+
+# === EMBEDDINGS ===
+embeddings = GoogleGenerativeAIEmbeddings(
+    model="models/text-embedding-004",
+    google_api_key=SecretStr(google_key)
+)
+
+# === VECTORSTORE ===
 vectorstore = PineconeVectorStore(
-    index_name=os.getenv("PINECONE_INDEX_NAME"),
+    index_name=pinecone_index,
     embedding=embeddings
 )
 
-# 2. Setup the AI (Gemini)
+# === LLM ===
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash", # Faster and great for this use case
+    model="gemini-2.5-flash",
     temperature=0.3,
-    google_api_key=os.getenv("GOOGLE_API_KEY")
+    google_api_key=google_key # type: ignore
 )
 
-# 3. The "Traceability" Prompt
-# This forces the AI to prove its work by citing the text.
+# --- FIX: Use {{ double braces }} for the JSON example ---
 template = """
 You are E-parchi, an expert medical assistant.
-Use the context below to answer the doctor's question.
+Use ONLY the provided context.
 
-CRITICAL INSTRUCTION:
-1. Answer strictly based on the context.
-2. Provide a "summary" of the diagnosis.
-3. Provide "evidence" by quoting the exact text from the document.
+Rules:
+1. Do NOT hallucinate.
+2. Provide medical clarity.
+3. Provide JSON with:
+- summary
+- diagnosis
+- medicines
+4. Use evidence from context.
 
-Context: {context}
+Context:
+{context}
 
-Question: {question}
+Question:
+{question}
 
-Format your answer as a JSON object with keys: "summary", "diagnosis", "medicines" (list).
+Output JSON only:
+{{
+  "summary": "...",
+  "diagnosis": "...",
+  "medicines": ["...", "..."]
+}}
 """
 
-QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
+QA_PROMPT = PromptTemplate.from_template(template)
 
-def get_rag_response(query_text: str, file_id: str = None):
+
+def get_rag_response(query_text: str, file_id: Optional[str] = None, patient_id: Optional[str] = None):
     try:
-        # 1. Create a Filter (If file_id is provided)
-        search_kwargs = {"k": 3}
-        if file_id:
-            search_kwargs["filter"] = {"file_id": file_id}
+        # === FILTERS (Clean, Editor-Friendly) ===
+        filters = None
+        if patient_id:
+            filters = {"patient_id": patient_id}
+        elif file_id:
+            filters = {"file_id": file_id}
 
-        # 2. Pass the filter to the Retriever
-        qa_chain = RetrievalQA.from_chain_type(
+        # === RETRIEVER ===
+        retriever = vectorstore.as_retriever(
+            search_kwargs={
+                "k": 3,
+                **({"filter": filters} if filters else {})
+            }
+        )
+
+        # === QA CHAIN ===
+        qa = RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",
-            retriever=vectorstore.as_retriever(search_kwargs=search_kwargs), # <--- Filter applied here
-            chain_type_kwargs={"prompt": QA_CHAIN_PROMPT},
+            retriever=retriever,
+            chain_type_kwargs={"prompt": QA_PROMPT},
             return_source_documents=True
         )
 
-        result = qa_chain.invoke({"query": query_text})
-        
-# Clean up the AI response (remove ```json markers)
-        clean_json = result["result"].replace("```json", "").replace("```", "").strip()
-        
+        result = qa.invoke({"query": query_text})
+
+        # === CLEAN JSON ===
+        clean_output = (
+            result["result"]
+            .replace("```json", "")
+            .replace("```", "")
+            .strip()
+        )
+
+        # === SOURCE DOC SAFE ===
+        source = None
+        docs = result.get("source_documents", [])
+        if docs and len(docs) > 0:
+            source = docs[0].metadata.get("source", None)
+
         return {
             "status": "success",
-            "ai_response": clean_json, 
-            "source_document": result["source_documents"][0].metadata.get("source")
+            "ai_response": clean_output,
+            "source_document": source
         }
+
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {
+            "status": "error",
+            "message": str(e)
+        }   

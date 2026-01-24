@@ -12,7 +12,7 @@ load_dotenv()
 vision_llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     temperature=0.0,
-    google_api_key=os.getenv("GOOGLE_API_KEY")
+    google_api_key=os.getenv("GOOGLE_API_KEY") # type: ignore
 )
 
 async def analyze_xray(file_bytes: bytes, filename: str):
@@ -60,7 +60,9 @@ async def analyze_xray(file_bytes: bytes, filename: str):
         response = vision_llm.invoke([message])
         
         # 4. Clean and Parse JSON
-        clean_json = response.content.replace("```json", "").replace("```", "").strip()
+        content = response.content if isinstance(response.content, str) else response.content[0] if response.content else ""
+        content_str = str(content) if not isinstance(content, str) else content
+        clean_json = content_str.replace("```json", "").replace("```", "").strip()
         
         try:
             analysis_result = json.loads(clean_json)

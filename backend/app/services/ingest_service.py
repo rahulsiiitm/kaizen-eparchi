@@ -7,28 +7,31 @@ from pydantic import SecretStr
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.documents import Document
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# 1. Setup Models
-# Vision Model (Reads the Image)
+# Setup Models
 vision_llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     api_key=SecretStr(os.getenv("GOOGLE_API_KEY") or "")
 )
 
-# Reasoning Model (Summarizes the Text)
 summary_llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     temperature=0.3,
     api_key=SecretStr(os.getenv("GOOGLE_API_KEY") or "")
 )
 
-embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+#
+embeddings = GoogleGenerativeAIEmbeddings(
+    model="models/text-embedding-004",
+    google_api_key=SecretStr(os.getenv("GOOGLE_API_KEY") or "") # <--- THE MISSING PIECE
+)
 
-async def process_upload(file_bytes: bytes, filename: str):
+# --- UPDATE: Accept patient_id ---
+async def process_upload(file_bytes: bytes, filename: str, patient_id: str | None = None):
     try:
         print(f"👀 Reading file: {filename}...")
         
@@ -51,11 +54,15 @@ async def process_upload(file_bytes: bytes, filename: str):
         # --- STEP 2: Save to Brain (Pinecone) ---
         file_id = str(uuid.uuid4())
         
+        # LOGIC: If App sends a patient_id, use it. If not, use file_id as a fallback.
+        final_patient_id = patient_id if patient_id else file_id
+
         doc = Document(
             page_content=extracted_text,
             metadata={
                 "source": filename,
                 "file_id": file_id,
+                "patient_id": final_patient_id, # <--- KEY CHANGE: Storing the Group ID
                 "upload_timestamp": time.time()
             }
         )
@@ -65,9 +72,9 @@ async def process_upload(file_bytes: bytes, filename: str):
             embedding=embeddings
         )
         vectorstore.add_documents([doc])
-        print(f"💾 Memorized with ID: {file_id}")
+        print(f"💾 Memorized with ID: {file_id} (Patient: {final_patient_id})")
 
-        # --- STEP 3: Auto-Generate Summary & Prescription (The New Step) ---
+        # --- STEP 3: Auto-Generate Summary ---
         print("🧠 Generating Instant Summary...")
         
         summary_prompt = f"""
@@ -92,11 +99,9 @@ async def process_upload(file_bytes: bytes, filename: str):
             content = " ".join(str(item) for item in content)
         clean_json_text = content.replace("```json", "").replace("```", "").strip()
         
-        # Parse it to ensure it's valid JSON for the frontend
         try:
             parsed_summary = json.loads(clean_json_text)
         except:
-            # Fallback if AI messes up JSON format
             parsed_summary = {
                 "patient_summary": "Analysis complete.", 
                 "diagnosis": "See text", 
@@ -107,6 +112,7 @@ async def process_upload(file_bytes: bytes, filename: str):
         return {
             "status": "success",
             "file_id": file_id,
+            "patient_id": final_patient_id, # Return this so App can track session
             "extracted_text_preview": extracted_text[:100] + "...",
             "analysis": parsed_summary
         }
@@ -114,3 +120,39 @@ async def process_upload(file_bytes: bytes, filename: str):
     except Exception as e:
         print(f"❌ Error in processing: {e}")
         return {"status": "error", "message": str(e)}
+
+# ADD THIS FUNCTION AT THE END OF THE FILE
+async def memorize_report(text_summary: str, filename: str, patient_id: str):
+    """
+    Manually saves a text summary (like an X-Ray finding) into Pinecone.
+    This allows RAG to answer questions about X-Rays.
+    """
+    try:
+        # 1. Create a unique ID
+        file_id = str(uuid.uuid4())
+        
+        # 2. Prepare the Document
+        doc = Document(
+            page_content=text_summary,
+            metadata={
+                "source": filename,
+                "file_id": file_id,
+                "patient_id": patient_id, # Link to Patient
+                "type": "medical_report",
+                "upload_timestamp": time.time()
+            }
+        )
+
+        # 3. Push to Pinecone
+        vectorstore = PineconeVectorStore(
+            index_name=os.getenv("PINECONE_INDEX_NAME"),
+            embedding=embeddings
+        )
+        vectorstore.add_documents([doc])
+        
+        print(f"💾 Manually Memorized Report: {file_id}")
+        return file_id
+
+    except Exception as e:
+        print(f"❌ Failed to memorize report: {e}")
+        return None
