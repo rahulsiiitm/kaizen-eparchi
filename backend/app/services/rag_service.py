@@ -39,35 +39,27 @@ vectorstore = PineconeVectorStore(
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     temperature=0.3,
-    google_api_key=google_key # type: ignore
+    google_api_key=google_key
 )
 
-# --- FIX: Use {{ double braces }} for the JSON example ---
+# --- THE FIX: Natural Language Prompt (No JSON) ---
 template = """
-You are E-parchi, an expert medical assistant.
-Use ONLY the provided context.
+You are E-parchi, an intelligent medical assistant for doctors.
+You have access to the patient's history in the Context below.
 
-Rules:
-1. Do NOT hallucinate.
-2. Provide medical clarity.
-3. Provide JSON with:
-- summary
-- diagnosis
-- medicines
-4. Use evidence from context.
-
-Context:
+Context from patient records:
 {context}
 
-Question:
+Doctor's Question:
 {question}
+Instructions:
+1. Answer the doctor's question SPECIFICALLY. Do not just summarize the file.
+2. If the doctor asks "Is he improving?", compare the dates in the context to give a trend.
+3. If the context has X-Ray results, mention findings like fractures or severity.
+4. If the answer is not in the context, say "I don't see that in the records."
+5. Be concise and professional. Do NOT use markdown code blocks or JSON.
 
-Output JSON only:
-{{
-  "summary": "...",
-  "diagnosis": "...",
-  "medicines": ["...", "..."]
-}}
+Answer:
 """
 
 QA_PROMPT = PromptTemplate.from_template(template)
@@ -75,7 +67,7 @@ QA_PROMPT = PromptTemplate.from_template(template)
 
 def get_rag_response(query_text: str, file_id: Optional[str] = None, patient_id: Optional[str] = None):
     try:
-        # === FILTERS (Clean, Editor-Friendly) ===
+        # === FILTERS ===
         filters = None
         if patient_id:
             filters = {"patient_id": patient_id}
@@ -83,9 +75,10 @@ def get_rag_response(query_text: str, file_id: Optional[str] = None, patient_id:
             filters = {"file_id": file_id}
 
         # === RETRIEVER ===
+        # We increase k=5 to get more history for better comparisons
         retriever = vectorstore.as_retriever(
             search_kwargs={
-                "k": 3,
+                "k": 5, 
                 **({"filter": filters} if filters else {})
             }
         )
@@ -101,15 +94,11 @@ def get_rag_response(query_text: str, file_id: Optional[str] = None, patient_id:
 
         result = qa.invoke({"query": query_text})
 
-        # === CLEAN JSON ===
-        clean_output = (
-            result["result"]
-            .replace("```json", "")
-            .replace("```", "")
-            .strip()
-        )
+        # === CLEAN OUTPUT ===
+        # Since we aren't asking for JSON anymore, we just strip whitespace
+        clean_output = result["result"].strip()
 
-        # === SOURCE DOC SAFE ===
+        # === SOURCE DOC ===
         source = None
         docs = result.get("source_documents", [])
         if docs and len(docs) > 0:
@@ -125,4 +114,4 @@ def get_rag_response(query_text: str, file_id: Optional[str] = None, patient_id:
         return {
             "status": "error",
             "message": str(e)
-        }   
+        }

@@ -1,6 +1,7 @@
 import os
 import base64
 import json
+import re
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
@@ -8,12 +9,27 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # We use the latest Flash model for Vision capabilities.
-# Note: Ensure your API key has access to this model version.
 vision_llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     temperature=0.0,
-    google_api_key=os.getenv("GOOGLE_API_KEY") # type: ignore
+    google_api_key=os.getenv("GOOGLE_API_KEY") 
 )
+
+def clean_json_string(s):
+    """
+    Aggressive cleaner for AI JSON output.
+    1. Removes Markdown code blocks.
+    2. Uses Regex to find the main JSON object { ... }.
+    """
+    # Step 1: Remove Markdown formatting
+    s = s.replace("```json", "").replace("```", "").strip()
+    
+    # Step 2: Use Regex to find the first '{' and the last '}'
+    # This ignores "Here is your analysis:" prefixes.
+    match = re.search(r"\{[\s\S]*\}", s)
+    if match:
+        return match.group(0)
+    return s
 
 async def analyze_xray(file_bytes: bytes, filename: str):
     try:
@@ -22,31 +38,21 @@ async def analyze_xray(file_bytes: bytes, filename: str):
         # 1. Prepare Image for the AI
         image_b64 = base64.b64encode(file_bytes).decode("utf-8")
         
-        # 2. The Radiologist Prompt
-        # We ask for "Location" to satisfy your requirement to "point out" the problem.
+        # 2. The Radiologist Prompt (Strict JSON)
         prompt = """
-        You are an expert Radiologist and Orthopedic Surgeon. 
-        Analyze this medical scan.
+        You are an expert Radiologist. Analyze this medical scan.
         
         TASK:
-        1. DETECT: Identify any fractures, dislocations, or abnormalities.
-        2. LOCATE: Specifically describe WHERE the problem is (e.g., "Distal 1/3rd of the radius").
-        3. PRESCRIBE: Suggest standard immediate treatment guidelines (First Aid/Splinting) and next steps.
+        1. DETECT: Identify fractures, abnormalities, or verify if Normal.
+        2. LOCATE: Specific body part and side.
         
-        OUTPUT FORMAT (Return ONLY raw JSON):
+        OUTPUT FORMAT (Strict JSON only, no trailing commas):
         {
-            "finding": "Short medical diagnosis (e.g., Tibia Fracture)",
-            "location": "Specific location description",
-            "severity": "Low / Moderate / Severe",
-            "treatment_plan": [
-                "Step 1: ...",
-                "Step 2: ..."
-            ],
-            "is_normal": false
+            "finding": "Diagnosis (e.g. Distal Radius Fracture)",
+            "location": "Specific location (e.g. Right Wrist)",
+            "severity": "Mild / Moderate / Severe",
+            "notes": "One sentence summary."
         }
-        
-        If the image is Normal, set "is_normal": true and "finding": "No abnormalities detected".
-        If the image is NOT a medical scan, return {"error": "Invalid Image"}.
         """
         
         message = HumanMessage(
@@ -59,19 +65,34 @@ async def analyze_xray(file_bytes: bytes, filename: str):
         # 3. Invoke the Vision Model
         response = vision_llm.invoke([message])
         
-        # 4. Clean and Parse JSON
-        content = response.content if isinstance(response.content, str) else response.content[0] if response.content else ""
-        content_str = str(content) if not isinstance(content, str) else content
-        clean_json = content_str.replace("```json", "").replace("```", "").strip()
+        # 4. Handle Response Content
+        content = response.content
+        if isinstance(content, list):
+            content = content[0]
+        content_str = str(content)
+        
+        print(f"🔍 Raw AI Output: {content_str}") # Debug print
+
+        # 5. Clean & Parse
+        clean_json = clean_json_string(content_str)
         
         try:
             analysis_result = json.loads(clean_json)
         except json.JSONDecodeError:
-            # Fallback if the AI chatters instead of giving JSON
-            analysis_result = {
-                "finding": "Analysis Complete",
-                "raw_output": clean_json
-            }
+            print("⚠️ Standard JSON parse failed. Trying repair...")
+            # Fallback: Sometimes AI leaves a trailing comma like {"a":1,}
+            # We try to remove it.
+            clean_json = re.sub(r",\s*}", "}", clean_json)
+            try:
+                analysis_result = json.loads(clean_json)
+            except:
+                # Ultimate Fail-Safe
+                analysis_result = {
+                    "finding": "Analysis Failed",
+                    "severity": "Unknown",
+                    "location": "See Image",
+                    "notes": "Could not parse AI response."
+                }
 
         return {
             "status": "success",
@@ -81,4 +102,13 @@ async def analyze_xray(file_bytes: bytes, filename: str):
 
     except Exception as e:
         print(f"❌ X-Ray Analysis Failed: {e}")
-        return {"status": "error", "message": str(e)}
+        return {
+            "status": "error", 
+            "message": str(e),
+            "analysis": {
+                "finding": "System Error",
+                "severity": "Unknown",
+                "location": "Unknown",
+                "notes": str(e)
+            }
+        }
