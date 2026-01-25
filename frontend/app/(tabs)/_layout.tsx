@@ -1,123 +1,80 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { StyleSheet, useColorScheme, View } from "react-native";
-import { HapticTab } from "../../components/haptic-tab"; //
-import { Colors } from "../../constants/theme"; //
+import { Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme() ?? "light";
-  const theme = Colors[colorScheme];
+  const insets = useSafeAreaInsets();
+  const CLINICAL_BLUE = "#005EB8";
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false, // Clean icon-only look
-        tabBarButton: HapticTab, // Adds the tactile click feel
-        tabBarActiveTintColor: theme.tint,
-        tabBarInactiveTintColor: theme.icon,
-        tabBarStyle: [
-          styles.tabBar,
-          {
-            backgroundColor: colorScheme === "dark" ? "#1E1E1E" : "#FFFFFF",
-            borderColor: colorScheme === "dark" ? "#333" : "transparent",
-            shadowColor: colorScheme === "dark" ? "#000" : "#171717",
-          },
-        ],
+        tabBarActiveTintColor: CLINICAL_BLUE,
+        tabBarInactiveTintColor: "#8E8E93",
+        tabBarStyle: {
+          backgroundColor: "white",
+          borderTopWidth: 1,
+          borderTopColor: "#F2F2F7",
+          height: Platform.OS === "ios" ? 85 : 65,
+          paddingBottom: Platform.OS === "ios" ? 28 : 10,
+          paddingTop: 10,
+          elevation: 8,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "600",
+          marginTop: -2,
+        },
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
+          title: "Dashboard",
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[styles.iconContainer, focused && styles.focusedContainer]}
-            >
-              <Ionicons
-                name={focused ? "home" : "home-outline"}
-                size={24}
-                color={color}
-              />
-              {focused && (
-                <View style={[styles.activeDot, { backgroundColor: color }]} />
-              )}
-            </View>
+            <Ionicons
+              name={focused ? "grid" : "grid-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
+
       <Tabs.Screen
         name="patient"
         options={{
+          title: "Patients",
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[styles.iconContainer, focused && styles.focusedContainer]}
-            >
-              <Ionicons
-                name={focused ? "people" : "people-outline"}
-                size={24}
-                color={color}
-              />
-              {focused && (
-                <View style={[styles.activeDot, { backgroundColor: color }]} />
-              )}
-            </View>
+            <Ionicons
+              name={focused ? "people" : "people-outline"}
+              size={26}
+              color={color}
+            />
           ),
         }}
       />
+
+      {/* ⚡ NEW: Settings Tab Added */}
       <Tabs.Screen
         name="setting"
         options={{
+          title: "Settings",
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[styles.iconContainer, focused && styles.focusedContainer]}
-            >
-              <Ionicons
-                name={focused ? "settings" : "settings-outline"}
-                size={24}
-                color={color}
-              />
-              {focused && (
-                <View style={[styles.activeDot, { backgroundColor: color }]} />
-              )}
-            </View>
+            <Ionicons
+              name={focused ? "settings" : "settings-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    position: "absolute",
-    bottom: 20, // 👈 Floats slightly above bottom
-    left: 16,
-    right: 16,
-    height: 64,
-    borderRadius: 24, // Soft rounded corners
-    borderTopWidth: 0,
-    elevation: 8, // Android Shadow
-    shadowOffset: { width: 0, height: 8 }, // iOS Shadow
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingBottom: 0, // Fix alignment
-  },
-  iconContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    height: 50,
-    width: 50,
-  },
-  focusedContainer: {
-    // Optional: Add subtle background scaling if desired
-  },
-  activeDot: {
-    position: "absolute",
-    bottom: -8, // Places the dot below the icon
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-});

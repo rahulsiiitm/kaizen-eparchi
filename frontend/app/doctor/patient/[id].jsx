@@ -12,16 +12,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomAlert from "../../../components/custom_alert";
 import { Colors } from "../../../constants/theme";
+import { useVisitHistory } from "../../../hooks/useAppData";
 import { api } from "../../../services/api";
 import { recordStyles as styles } from "../../../styles/patient_style";
-// 👇 Import your new Hook
-import { useVisitHistory } from "../../../hooks/useAppData";
 
 export default function PatientRecordScreen() {
   const { id, name, age, gender, total_visits } = useLocalSearchParams();
   const router = useRouter();
 
-  // ⚡ USE THE HOOK
   const { history, loading, refetch } = useVisitHistory(id);
 
   const [createLoading, setCreateLoading] = useState(false);
@@ -42,7 +40,14 @@ export default function PatientRecordScreen() {
     if (result && result.status === "started") {
       router.push({
         pathname: "/doctor/patient/chat",
-        params: { visitId: result.visit._id, patientName: name, mode: "new" },
+        // ⚡ Updated: Pass patientName and visitNumber
+        params: {
+          visitId: result.visit._id,
+          patientId: id,
+          patientName: name,
+          visitNumber: history.length + 1, // Newest visit
+          mode: "new",
+        },
       });
     } else {
       setAlertConfig({
@@ -86,7 +91,14 @@ export default function PatientRecordScreen() {
         onPress={() =>
           router.push({
             pathname: "/doctor/patient/chat",
-            params: { visitId: item._id, previousContext: "Review Mode" },
+            // ⚡ Updated: Pass patientName and visitNumber
+            params: {
+              visitId: item._id,
+              patientId: id,
+              patientName: name,
+              visitNumber: visitNumber,
+              previousContext: "Review Mode",
+            },
           })
         }
       >

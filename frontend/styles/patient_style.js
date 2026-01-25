@@ -1,290 +1,348 @@
-import { Dimensions, StyleSheet } from "react-native";
+import { Dimensions, Platform, StyleSheet } from "react-native";
 
-const { height, width } = Dimensions.get("window");
-const PRIMARY_BLUE = "#007AFF";
+const { width } = Dimensions.get("window");
 
-// ==========================================
-// 1. Patient Record Screen Styles ([id].jsx)
-// ==========================================
+// ⚡ 1. COMPACT DASHBOARD / LIST STYLES
 export const recordStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1 },
   header: {
-    backgroundColor: PRIMARY_BLUE,
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "android" ? 40 : 10,
+    paddingBottom: 15,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
   headerContent: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
-    marginTop: 10,
+    marginBottom: 15,
   },
-  headerTitle: { fontSize: 18, fontWeight: "600", color: "white" },
-  backButton: { padding: 5 },
-  patientInfoContainer: { paddingHorizontal: 5 },
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "white",
+    marginLeft: 10,
+  },
+
+  // Patient Info
+  patientInfoContainer: { paddingHorizontal: 10 },
   patientName: {
-    fontSize: 26,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "800",
     color: "white",
     marginBottom: 4,
   },
-  patientDetails: { fontSize: 16, color: "rgba(255,255,255,0.8)" },
+  patientDetails: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.9)",
+    fontWeight: "500",
+  },
 
-  content: { flex: 1, padding: 20 },
+  // List Content
+  content: { flex: 1, paddingHorizontal: 16, paddingTop: 20 },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#334155",
-    marginBottom: 15,
-  },
-
-  visitCard: {
-    backgroundColor: "white",
-    padding: 16,
-    borderRadius: 16,
     marginBottom: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    shadowColor: "#64748B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
+    marginLeft: 4,
   },
-  visitDate: {
-    fontSize: 14,
-    color: "#64748B",
-    marginBottom: 4,
-    fontWeight: "500",
-  },
-  visitSummary: { fontSize: 16, color: "#0F172A", fontWeight: "500" },
 
-  footer: {
-    position: "absolute",
-    bottom: 30,
-    left: 20,
-    right: 20,
-  },
-  newConsultBtn: {
-    backgroundColor: "#0088CC",
-    borderRadius: 30,
-    height: 56,
+  // Visit Card
+  visitCard: {
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  visitSummary: { fontSize: 15, fontWeight: "600" },
+
+  // Floating Button
+  footer: { position: "absolute", bottom: 30, left: 20, right: 20 },
+  newConsultBtn: {
+    flexDirection: "row",
+    backgroundColor: "#007AFF",
+    paddingVertical: 16,
+    borderRadius: 30,
     justifyContent: "center",
-    elevation: 5,
-    shadowColor: "#0088CC",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    alignItems: "center",
+    elevation: 6,
+    shadowColor: "#007AFF",
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
   btnText: { color: "white", fontSize: 16, fontWeight: "bold", marginLeft: 8 },
 });
 
-// ==========================================
-// 2. Chat Screen Styles (chat.jsx)
-// ==========================================
+// ⚡ 2. COMPACT CHAT STYLES (Updated)
 export const chatStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF" },
+  container: { flex: 1 },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    backgroundColor: "white",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
-  backBtn: { padding: 5 },
-  headerTitle: { fontSize: 16, fontWeight: "700", color: "#1E293B" },
-  chatArea: { flex: 1, paddingHorizontal: 16, paddingTop: 20 },
+  backBtn: { padding: 4, marginRight: 10 },
+  headerTitle: { fontSize: 17, fontWeight: "700" },
+  headerSubtitle: { fontSize: 12, fontWeight: "500", marginTop: 1 }, // 👈 Added
 
-  messageRow: { flexDirection: "row", marginBottom: 20 },
+  chatArea: { flex: 1, paddingHorizontal: 12 },
+
+  // Messages
+  messageRow: {
+    flexDirection: "row",
+    marginBottom: 4,
+    marginTop: 4,
+    alignItems: "flex-end",
+  },
   doctorRow: { justifyContent: "flex-end" },
   aiRow: { justifyContent: "flex-start" },
 
+  // Bubbles
+  bubble: {
+    maxWidth: "80%",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+  },
+  doctorBubble: {
+    backgroundColor: "#007AFF",
+    borderBottomRightRadius: 4,
+  },
+  aiBubble: {
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    backgroundColor: "white",
+    elevation: 1,
+  },
+
+  // Text
+  msgText: { fontSize: 15, lineHeight: 22 },
+  doctorText: { color: "white" },
+  aiText: { color: "#1C1C1E" },
+
+  // Bot Avatar
   botAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#0F172A",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
-    marginTop: 4,
+    marginBottom: 2,
+    backgroundColor: "#F2F2F7",
   },
 
-  bubble: { padding: 14, borderRadius: 18, maxWidth: "80%" },
-  aiBubble: { backgroundColor: "#F1F5F9", borderTopLeftRadius: 4 },
-  doctorBubble: { backgroundColor: PRIMARY_BLUE, borderBottomRightRadius: 4 },
-
-  msgText: { fontSize: 15, lineHeight: 22 },
-  aiText: { color: "#1E293B" },
-  doctorText: { color: "white" },
-
-  bubbleFiles: { marginBottom: 8 },
+  // File Tags
   fileTag: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.2)",
-    padding: 6,
-    borderRadius: 6,
-    marginBottom: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginBottom: 6,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
   },
-  fileTagText: { color: "white", fontSize: 11, marginLeft: 4 },
+  fileTagText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "white",
+    marginLeft: 6,
+  },
 
-  previewContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: "#F8FAFC",
-  },
-  previewItem: {
+  // Report View
+  reportContainer: { marginTop: 4 },
+  summaryBox: { marginBottom: 8 },
+  summaryHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "white",
-    padding: 8,
-    borderRadius: 8,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    marginBottom: 2,
   },
-  previewName: {
+  summaryTitle: {
     fontSize: 12,
-    color: "#334155",
-    maxWidth: 100,
-    marginHorizontal: 6,
+    fontWeight: "700",
+    marginLeft: 5,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  removeBtn: { padding: 2 },
+  summaryText: { fontSize: 14, lineHeight: 20 },
+  diagnosisBox: {
+    marginVertical: 6,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
+  },
+  medList: { marginTop: 6 },
+  medItem: { flexDirection: "row", alignItems: "center", marginBottom: 3 },
+  bullet: { width: 4, height: 4, borderRadius: 2, marginRight: 8 },
+  medText: { fontSize: 14, fontWeight: "500" },
 
+  // Input Area
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
     backgroundColor: "white",
   },
-  attachBtn: { marginRight: 10 },
+  attachBtn: { padding: 8, marginRight: 4 },
   input: {
     flex: 1,
-    backgroundColor: "#F1F5F9",
-    borderRadius: 24,
+    minHeight: 40,
+    maxHeight: 120,
+    borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
     fontSize: 16,
-    maxHeight: 100,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    backgroundColor: "#F2F2F7",
   },
   sendBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#0F172A",
+    backgroundColor: "#007AFF",
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 10,
+    elevation: 2,
   },
-  sendBtnDisabled: { backgroundColor: "#CBD5E1" },
 });
 
-// ==========================================
-// 3. Upload Popup Styles (upload.jsx)
-// ==========================================
+// ⚡ 3. COMPACT UPLOAD STYLES
 export const uploadStyles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "flex-end",
+    backgroundColor: "transparent",
   },
   backgroundClickable: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
   },
   popupCard: {
-    width: "85%",
     backgroundColor: "white",
-    borderRadius: 20,
-    elevation: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     overflow: "hidden",
+    elevation: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 15,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: "#F2F2F7",
   },
-  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#333" },
-  closeBtn: { padding: 5 },
-  content: { padding: 15 },
-
-  rowContainer: { flexDirection: "row", gap: 10, marginBottom: 15 },
-  actionCard: {
-    flex: 1,
-    height: 100,
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1C1C1E",
   },
+  closeBtn: {
+    padding: 4,
+    backgroundColor: "#F2F2F7",
+    borderRadius: 20,
+  },
+  content: { padding: 20 },
+  rowContainer: { flexDirection: "row", gap: 12, marginBottom: 20 },
+  actionCard: { flex: 1, height: 110 },
   dashedContainer: {
     flex: 1,
-    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#D1D1D6",
+    borderStyle: "dashed",
+    borderRadius: 16,
     justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FAFAFA",
   },
   cardLabel: {
-    marginTop: 6,
-    fontSize: 12,
+    marginTop: 8,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#4B5563",
+    color: "#007AFF",
   },
-
+  listContainer: { marginTop: 0 },
   selectionCount: {
     fontSize: 13,
-    fontWeight: "700",
-    color: "#333",
+    fontWeight: "600",
     marginBottom: 8,
+    color: "#8E8E93",
+    textTransform: "uppercase",
   },
-  emptyHint: {
-    textAlign: "center",
-    color: "#999",
-    marginTop: 20,
-    fontSize: 13,
-  },
-
-  listContainer: { marginTop: 5 },
   fileRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 8,
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
-  },
-  fileName: { flex: 1, marginLeft: 8, fontSize: 13, color: "#333" },
-
-  footer: { padding: 15, borderTopWidth: 1, borderTopColor: "#F0F0F0" },
-  btn: {
-    backgroundColor: PRIMARY_BLUE,
-    padding: 14,
+    backgroundColor: "#F2F2F7",
+    padding: 12,
     borderRadius: 12,
-    alignItems: "center",
+    marginBottom: 8,
   },
-  btnText: { color: "#FFF", fontWeight: "bold", fontSize: 15 },
+  fileName: {
+    flex: 1,
+    marginHorizontal: 12,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#1C1C1E",
+  },
+  emptyHint: {
+    textAlign: "center",
+    color: "#C7C7CC",
+    marginTop: 20,
+    fontSize: 15,
+  },
+  footer: { padding: 20, borderTopWidth: 1, borderTopColor: "#F2F2F7" },
+  btn: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    shadowColor: "#007AFF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  btnText: { color: "white", fontSize: 16, fontWeight: "700" },
 });

@@ -13,6 +13,7 @@ export default function SearchBar({
   onChangeText,
   onClear,
   placeholder = "Search...",
+  containerStyle, // ⚡ THIS IS CRITICAL for side-by-side layout
 }) {
   const theme = useColorScheme() ?? "light";
   const activeColors = Colors[theme];
@@ -25,6 +26,7 @@ export default function SearchBar({
           backgroundColor: activeColors.inputBackground,
           borderColor: activeColors.cardBorder,
         },
+        containerStyle, // ⚡ Apply the custom style here
       ]}
     >
       <Ionicons
@@ -59,8 +61,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 20,
+    paddingVertical: 12,
     borderWidth: 1,
   },
   icon: {
@@ -69,6 +70,6 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    height: "100%", // Ensures it fills the container height
+    height: "100%",
   },
 });

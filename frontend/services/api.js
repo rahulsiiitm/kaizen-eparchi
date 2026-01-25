@@ -16,22 +16,17 @@ const safeFetch = async (url, options = {}) => {
     });
     clearTimeout(timeoutId);
 
-    // 1. Read raw text first to debug "Unexpected character" errors
     const responseText = await response.text();
 
-    // 2. Log error if status is not OK (200-299)
     if (!response.ok) {
       console.log(`❌ API Error [${response.status}] ${url}`);
-      console.log(`   Server Response: ${responseText}`); // <--- THIS WILL SHOW YOU THE REAL ERROR
       return null;
     }
 
-    // 3. Try parsing JSON
     try {
       return JSON.parse(responseText);
     } catch (e) {
       console.log(`⚠️ Parse Error on ${url}: Response was not JSON.`);
-      console.log(`   Raw Body: ${responseText}`);
       return null;
     }
   } catch (error) {
@@ -55,11 +50,20 @@ export const api = {
     });
   },
 
-  getPatients: async () => {
-    return await safeFetch(`${BASE_URL}/patients`);
+  getPatients: async (date = null) => {
+    let url = `${BASE_URL}/patients`;
+    if (date) {
+      url += `?visit_date=${date}`;
+    }
+    return await safeFetch(url);
   },
 
   // --- B. CLINIC VISIT FLOW ---
+
+  // Get Single Visit Details (For Chat History)
+  getVisit: async (visitId) => {
+    return await safeFetch(`${BASE_URL}/visits/${visitId}`);
+  },
 
   startVisit: async (patientId) => {
     const formData = new FormData();
@@ -79,14 +83,16 @@ export const api = {
 
   // --- C. AI TOOLS ---
 
-  uploadFile: async (visitId, imageUri, type = "prescription") => {
+  // ⚡ FIX: 'docType' parameter renamed to 'type' for backend compatibility
+  uploadFile: async (visitId, imageUri, docType = "prescription") => {
     const formData = new FormData();
     formData.append("file", {
       uri: imageUri,
       type: "image/jpeg",
       name: "upload.jpg",
     });
-    formData.append("type", type);
+    // ⚡ CRITICAL FIX: The backend looks for 'type', not 'docType'
+    formData.append("type", docType);
 
     return await safeFetch(`${BASE_URL}/visits/${visitId}/upload`, {
       method: "POST",

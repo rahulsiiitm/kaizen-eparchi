@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -17,6 +17,75 @@ import { Colors } from "../../../constants/theme";
 import { api } from "../../../services/api";
 import { chatStyles as styles } from "../../../styles/patient_style";
 
+// --- ⚡ COMPACT REPORT COMPONENT ---
+const MedicalReportView = ({ data, colors }) => {
+  return (
+    <View style={styles.reportContainer}>
+      {data.summary && (
+        <View style={styles.summaryBox}>
+          <View style={styles.summaryHeader}>
+            <Ionicons name="document-text" size={12} color={colors.tint} />
+            <Text style={[styles.summaryTitle, { color: colors.tint }]}>
+              Analysis
+            </Text>
+          </View>
+          <Text style={[styles.summaryText, { color: colors.text }]}>
+            {data.summary}
+          </Text>
+        </View>
+      )}
+
+      {data.diagnosis && (
+        <View
+          style={[
+            styles.diagnosisBox,
+            { backgroundColor: colors.inputBackground },
+          ]}
+        >
+          <View style={styles.summaryHeader}>
+            <Ionicons name="medkit" size={12} color="#0284C7" />
+            <Text style={[styles.summaryTitle, { color: "#0284C7" }]}>
+              Diagnosis
+            </Text>
+          </View>
+          <Text
+            style={{
+              color: colors.text,
+              fontWeight: "600",
+              fontSize: 14,
+              marginTop: 2,
+            }}
+          >
+            {data.diagnosis}
+          </Text>
+        </View>
+      )}
+
+      {data.medicines && data.medicines.length > 0 && (
+        <View style={styles.medList}>
+          <View style={[styles.summaryHeader, { marginBottom: 4 }]}>
+            <Ionicons name="bandage" size={12} color="#10B981" />
+            <Text style={[styles.summaryTitle, { color: "#10B981" }]}>
+              Prescription
+            </Text>
+          </View>
+          {data.medicines.map((med, index) => (
+            <View key={index} style={styles.medItem}>
+              <View
+                style={[styles.bullet, { backgroundColor: colors.subtext }]}
+              />
+              <Text style={[styles.medText, { color: colors.text }]}>
+                {med}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+};
+
+// --- Helper Functions ---
 const tryParseReport = (text) => {
   if (!text || typeof text !== "string") return null;
   try {
@@ -30,101 +99,6 @@ const tryParseReport = (text) => {
   return null;
 };
 
-const MedicalReportView = ({ data, colors }) => {
-  return (
-    <View style={{ marginTop: 5 }}>
-      {data.summary && (
-        <View style={{ marginBottom: 12 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: 4,
-            }}
-          >
-            <Ionicons name="document-text" size={16} color={colors.tint} />
-            <Text
-              style={{ fontWeight: "700", color: colors.tint, marginLeft: 6 }}
-            >
-              Analysis Summary
-            </Text>
-          </View>
-          <Text style={{ color: colors.text, lineHeight: 20 }}>
-            {data.summary}
-          </Text>
-        </View>
-      )}
-      {data.diagnosis && (
-        <View
-          style={{
-            marginBottom: 12,
-            backgroundColor: colors.inputBackground,
-            padding: 10,
-            borderRadius: 8,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: 4,
-            }}
-          >
-            <Ionicons name="medkit" size={16} color="#0284C7" />
-            <Text
-              style={{ fontWeight: "700", color: "#0284C7", marginLeft: 6 }}
-            >
-              Potential Diagnosis
-            </Text>
-          </View>
-          <Text style={{ color: colors.text, fontWeight: "500" }}>
-            {data.diagnosis}
-          </Text>
-        </View>
-      )}
-      {data.medicines && data.medicines.length > 0 && (
-        <View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: 4,
-            }}
-          >
-            <Ionicons name="bandage" size={16} color="#10B981" />
-            <Text
-              style={{ fontWeight: "700", color: "#10B981", marginLeft: 6 }}
-            >
-              Suggested Medicines
-            </Text>
-          </View>
-          {data.medicines.map((med, index) => (
-            <View
-              key={index}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginTop: 2,
-              }}
-            >
-              <View
-                style={{
-                  width: 4,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: colors.subtext,
-                  marginRight: 8,
-                }}
-              />
-              <Text style={{ color: colors.text }}>{med}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </View>
-  );
-};
-
 const FormattedText = ({ text, style }) => {
   if (!text) return null;
   const lines = text.split("\n");
@@ -133,7 +107,7 @@ const FormattedText = ({ text, style }) => {
       {lines.map((line, index) => {
         const parts = line.split(/(\*\*.*?\*\*)/g);
         return (
-          <Text key={index} style={[style, { marginBottom: 4 }]}>
+          <Text key={index} style={[style, { marginBottom: 2 }]}>
             {parts.map((part, partIndex) => {
               if (part.startsWith("**") && part.endsWith("**")) {
                 return (
@@ -153,27 +127,59 @@ const FormattedText = ({ text, style }) => {
 
 export default function ChatScreen() {
   const router = useRouter();
-  const { visitId } = useLocalSearchParams();
+  const { visitId, patientId, patientName, visitNumber } =
+    useLocalSearchParams();
   const scrollViewRef = useRef(null);
-
   const theme = useColorScheme() ?? "light";
   const activeColors = Colors[theme];
 
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: "👋 Session Started.\n\nI am ready to analyze reports. Upload an X-Ray or Prescription to begin.",
-      sender: "ai",
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  // Load History Logic
+  useEffect(() => {
+    const loadHistory = async () => {
+      if (!patientId || !visitId) {
+        setLoadingHistory(false);
+        return;
+      }
+      try {
+        const allVisits = await api.getHistory(patientId);
+        const currentVisit = allVisits.find((v) => v._id === visitId);
+        if (currentVisit && currentVisit.messages?.length > 0) {
+          const history = currentVisit.messages.map((msg, index) => ({
+            id: index + Date.now(),
+            text: msg.text || msg.message || msg.content || "",
+            sender: msg.sender || (msg.role === "user" ? "doctor" : "ai"),
+            files: msg.files || [],
+          }));
+          setMessages(history);
+        } else {
+          setMessages([
+            {
+              id: 1,
+              text: "👋 Hello! Dr. AI here.\n\nReady to analyze reports or answer medical questions.",
+              sender: "ai",
+            },
+          ]);
+        }
+      } catch (e) {
+        console.log("History error:", e);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+    loadHistory();
+  }, [visitId, patientId]);
 
   useFocusEffect(
     useCallback(() => {
       if (global.tempUploadFiles && global.tempUploadFiles.length > 0) {
-        const file = global.tempUploadFiles[0];
-        handleFileUpload(file);
+        global.tempUploadFiles.forEach((file) => {
+          handleFileUpload(file);
+        });
         global.tempUploadFiles = [];
       }
     }, []),
@@ -181,17 +187,20 @@ export default function ChatScreen() {
 
   const handleFileUpload = async (file) => {
     const userMsgId = Date.now();
+    const typeToSend = file.docType || "prescription";
+
     setMessages((prev) => [
       ...prev,
       {
         id: userMsgId,
-        text: `Uploading ${file.docType || "File"}...`,
+        text: `Uploading ${typeToSend === "xray" ? "X-Ray" : "Rx"}...`,
         sender: "doctor",
         files: [{ name: file.name }],
       },
     ]);
+
     setLoading(true);
-    const response = await api.uploadFile(visitId, file.uri, file.docType);
+    const response = await api.uploadFile(visitId, file.uri, typeToSend);
     setLoading(false);
 
     let responseText = response?.chat_message;
@@ -202,9 +211,7 @@ export default function ChatScreen() {
       ...prev,
       {
         id: Date.now() + 1,
-        text:
-          responseText ||
-          (response ? "✅ Analysis Complete." : "SYSTEM ERROR: Upload Failed."),
+        text: responseText || (response ? "✅ Done." : "❌ Failed."),
         sender: "ai",
       },
     ]);
@@ -218,6 +225,7 @@ export default function ChatScreen() {
       ...prev,
       { id: Date.now(), text: text, sender: "doctor" },
     ]);
+
     setLoading(true);
     const response = await api.chatWithVisit(visitId, text);
     setLoading(false);
@@ -230,7 +238,7 @@ export default function ChatScreen() {
       ...prev,
       {
         id: Date.now() + 1,
-        text: responseText || "I didn't understand that.",
+        text: responseText || "???",
         sender: "ai",
       },
     ]);
@@ -241,35 +249,48 @@ export default function ChatScreen() {
       style={[styles.container, { backgroundColor: activeColors.background }]}
       edges={["top"]}
     >
+      {/* ⚡ UPDATED HEADER */}
       <View
         style={[styles.header, { borderBottomColor: activeColors.cardBorder }]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={activeColors.text} />
+          <Ionicons name="chevron-back" size={24} color={activeColors.tint} />
         </TouchableOpacity>
         <View>
           <Text style={[styles.headerTitle, { color: activeColors.text }]}>
-            Consultation AI
+            {patientName || "Consultation"}
           </Text>
-          <Text style={{ fontSize: 12, color: activeColors.subtext }}>
-            Visit #{visitId ? visitId.slice(-4) : "..."}
+          <Text
+            style={[styles.headerSubtitle, { color: activeColors.subtext }]}
+          >
+            Visit #{visitNumber || (visitId ? visitId.slice(-4) : "...")} •{" "}
+            <Text style={{ fontWeight: "700", color: activeColors.tint }}>
+              Dr. AI
+            </Text>
           </Text>
         </View>
-        <View style={{ width: 24 }} />
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
         <ScrollView
           ref={scrollViewRef}
           style={styles.chatArea}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 20, paddingTop: 10 }}
           onContentSizeChange={() =>
             scrollViewRef.current?.scrollToEnd({ animated: true })
           }
         >
+          {loadingHistory && (
+            <ActivityIndicator
+              size="small"
+              color={activeColors.tint}
+              style={{ marginVertical: 10 }}
+            />
+          )}
+
           {messages.map((msg) => {
             const reportData = tryParseReport(msg.text);
             return (
@@ -281,17 +302,9 @@ export default function ChatScreen() {
                 ]}
               >
                 {msg.sender === "ai" && (
-                  <View
-                    style={[
-                      styles.botAvatar,
-                      { backgroundColor: activeColors.text },
-                    ]}
-                  >
-                    <Ionicons
-                      name="medical"
-                      size={16}
-                      color={activeColors.background}
-                    />
+                  <View style={[styles.botAvatar]}>
+                    {/* Bot Icon */}
+                    <Ionicons name="medical" size={14} color="#666" />
                   </View>
                 )}
                 <View
@@ -310,7 +323,7 @@ export default function ChatScreen() {
                       <View key={i} style={styles.fileTag}>
                         <Ionicons
                           name="document-text"
-                          size={14}
+                          size={10}
                           color="white"
                         />
                         <Text style={styles.fileTagText}>{f.name}</Text>
@@ -340,24 +353,17 @@ export default function ChatScreen() {
               </View>
             );
           })}
+
           {loading && (
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginLeft: 16,
-                marginBottom: 20,
-              }}
-            >
-              <ActivityIndicator size="small" color={activeColors.tint} />
+            <View style={{ marginLeft: 40, marginBottom: 10 }}>
               <Text
                 style={{
+                  fontSize: 11,
                   color: activeColors.subtext,
-                  marginLeft: 8,
-                  fontSize: 12,
+                  fontStyle: "italic",
                 }}
               >
-                Analyzing...
+                Dr. AI is typing...
               </Text>
             </View>
           )}
@@ -378,7 +384,7 @@ export default function ChatScreen() {
           >
             <Ionicons
               name="add-circle"
-              size={32}
+              size={30}
               color={activeColors.subtext}
             />
           </TouchableOpacity>
@@ -390,7 +396,7 @@ export default function ChatScreen() {
                 color: activeColors.text,
               },
             ]}
-            placeholder="Type your question..."
+            placeholder="Ask Dr. AI..."
             value={inputText}
             onChangeText={setInputText}
             multiline
@@ -399,7 +405,10 @@ export default function ChatScreen() {
           <TouchableOpacity
             style={[
               styles.sendBtn,
-              !inputText.trim() && { backgroundColor: activeColors.cardBorder },
+              !inputText.trim() && {
+                backgroundColor: activeColors.cardBorder,
+                elevation: 0,
+              },
             ]}
             onPress={handleSend}
             disabled={!inputText.trim()}
