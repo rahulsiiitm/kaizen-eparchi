@@ -9,14 +9,29 @@ export default function PatientLayout() {
         screenOptions={{
           headerShown: false,
           animation: "slide_from_right",
-          contentStyle: { backgroundColor: "#fff" },
+          contentStyle: { backgroundColor: "transparent" }, // Important for transparency
         }}
       >
-        {/* Dynamic route for patient details */}
-        <Stack.Screen name="[id]" /> 
+        <Stack.Screen
+          name="[id]"
+          options={{ contentStyle: { backgroundColor: "#fff" } }}
+        />
+        <Stack.Screen
+          name="chat"
+          options={{ contentStyle: { backgroundColor: "#fff" } }}
+        />
         <Stack.Screen name="reports" />
         <Stack.Screen name="add_report" />
-        <Stack.Screen name="upload" />
+
+        {/* Configured as a Transparent Popup */}
+        <Stack.Screen
+          name="upload"
+          options={{
+            presentation: "transparentModal", // Allows seeing the chat behind it
+            animation: "fade",
+            headerShown: false,
+          }}
+        />
       </Stack>
     </>
   );

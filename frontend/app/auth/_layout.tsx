@@ -7,7 +7,7 @@ export default function AuthLayout() {
       <StatusBar barStyle="dark-content" />
       <Stack
         screenOptions={{
-          // We hide the header because you are building 
+          // We hide the header because you are building
           // your own custom back buttons in your screens
           headerShown: false,
           animation: "slide_from_right",
