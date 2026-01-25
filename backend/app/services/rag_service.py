@@ -36,28 +36,32 @@ vectorstore = PineconeVectorStore(
 )
 
 # === LLM ===
+# ✅ USING gemini-flash-latest for stability & global knowledge
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
+    model="gemini-flash-latest",
     temperature=0.3,
     google_api_key=google_key
 )
 
-# --- THE FIX: Natural Language Prompt (No JSON) ---
+# --- THE FIX: HYBRID PROMPT (Context + Global Knowledge) ---
 template = """
-You are E-parchi, an intelligent medical assistant for doctors.
-You have access to the patient's history in the Context below.
+You are E-parchi, an expert medical assistant.
+You have access to the patient's records (Context), but you also possess extensive general medical knowledge.
 
-Context from patient records:
+Context from records:
 {context}
 
 Doctor's Question:
 {question}
+
 Instructions:
-1. Answer the doctor's question SPECIFICALLY. Do not just summarize the file.
-2. If the doctor asks "Is he improving?", compare the dates in the context to give a trend.
-3. If the context has X-Ray results, mention findings like fractures or severity.
-4. If the answer is not in the context, say "I don't see that in the records."
-5. Be concise and professional. Do NOT use markdown code blocks or JSON.
+1. **First, check the Context:** Look for specific details about *this* patient (past meds, X-ray findings, allergies).
+2. **If Context is missing the answer:** (e.g., Doctor asks "How do I treat this fracture?" but no prescription exists yet):
+   - You **MUST** use your general medical knowledge.
+   - Provide standard medical treatment guidelines, dosage recommendations, or next steps.
+   - Start these answers with: *"Based on standard medical guidelines..."* or *"General treatment for this condition includes..."*
+3. **Connect the Dots:** If the X-Ray context says "Fracture" and the doctor asks "Treatment?", suggest casting/splinting/surgery based on the severity mentioned.
+4. **Safety:** Do NOT invent *patient actions* (like "He took medicine yesterday") if it's not in the records. Only provide *medical advice* from global knowledge.
 
 Answer:
 """
@@ -75,7 +79,6 @@ def get_rag_response(query_text: str, file_id: Optional[str] = None, patient_id:
             filters = {"file_id": file_id}
 
         # === RETRIEVER ===
-        # We increase k=5 to get more history for better comparisons
         retriever = vectorstore.as_retriever(
             search_kwargs={
                 "k": 5, 
@@ -95,7 +98,6 @@ def get_rag_response(query_text: str, file_id: Optional[str] = None, patient_id:
         result = qa.invoke({"query": query_text})
 
         # === CLEAN OUTPUT ===
-        # Since we aren't asking for JSON anymore, we just strip whitespace
         clean_output = result["result"].strip()
 
         # === SOURCE DOC ===
